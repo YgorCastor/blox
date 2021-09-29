@@ -4,6 +4,6 @@ import me.ycastor.btc.domain.marketplace.core.models.entities.Coin
 import java.math.BigDecimal
 
 data class CoinMarketInformation(
-    val coin: Coin,
+    val coin: String,
     val price: BigDecimal,
 )

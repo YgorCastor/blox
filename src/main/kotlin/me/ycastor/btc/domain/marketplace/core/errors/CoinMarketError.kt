@@ -10,16 +10,17 @@ sealed class CoinMarketError(
     status: Int,
     details: List<String> = emptyList()
 ) : Error(code, message, status, details) {
-    data class CoinNotFound(val id: UUID) : CoinMarketError(
+    data class CoinNotFound(val id: UUID?, val coinCode: String?) : CoinMarketError(
         code = "MRKT_COIN_NOT_FOUND",
         status = HttpResponseStatus.NOT_FOUND.code(),
-        message = "No coin found for the id '$id'"
+        message = "Coin not Found",
+        details = listOfNotNull(id?.toString(), coinCode),
     )
 
     data class PersistenceError(val cause: String?) : CoinMarketError(
         code = "MRKT_PERSISTENCE_FAILURE",
         status = HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
         message = "Failure while connecting to the database!",
-        details = cause?.let { listOf(it) } ?: emptyList(),
+        details = listOfNotNull(cause),
     )
 }

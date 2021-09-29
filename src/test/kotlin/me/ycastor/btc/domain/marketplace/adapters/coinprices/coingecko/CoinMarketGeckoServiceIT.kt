@@ -7,7 +7,7 @@ import javax.inject.Inject
 internal class CoinMarketGeckoServiceIT {
 
     @Inject
-    lateinit var coinMarketGeckoService: CoinPricesGeckoService
+    lateinit var coinMarketGeckoService: CoinMarketPricesGeckoService
 
 
 }

@@ -9,20 +9,20 @@ import drewcarlson.coingecko.models.coins.MarketData
 import me.ycastor.btc.domain.marketplace.core.errors.CoinPriceServiceError
 import me.ycastor.btc.domain.marketplace.core.errors.InvalidCurrencyException
 import me.ycastor.btc.domain.marketplace.core.models.CoinMarketInformation
-import me.ycastor.btc.domain.marketplace.core.models.entities.Coin
-import me.ycastor.btc.domain.marketplace.core.ports.output.FetchCoinPricesInformation
+import me.ycastor.btc.domain.marketplace.core.ports.output.FetchCoinMarketPricesInformation
 import java.math.BigDecimal
 import javax.enterprise.context.ApplicationScoped
 import javax.ws.rs.core.Response.Status.Family
 
 @ApplicationScoped
-class CoinPricesGeckoService(private val client: CoinGeckoClient) : FetchCoinPricesInformation {
-    override suspend fun bySymbol(coin: Coin) =
-        Either.catch { client.getCoinById(id = coin.name).toCoinInformation(coin, "eur") }
+class CoinMarketPricesGeckoService(private val client: CoinGeckoClient) : FetchCoinMarketPricesInformation {
+
+    override suspend fun byCode(code: String) =
+        Either.catch { client.getCoinById(id = code).toCoinInformation("eur") }
             .mapLeft { it.toError() }
 
-    private fun CoinFullData.toCoinInformation(coin: Coin, currency: String) = CoinMarketInformation(
-        coin = coin,
+    private fun CoinFullData.toCoinInformation(currency: String) = CoinMarketInformation(
+        coin = this.name,
         price = this.marketData.forCurrency(currency),
     )
 
