@@ -9,17 +9,17 @@ sealed class CoinPriceServiceError(
     override val message: String,
     override val details: List<String> = emptyList(),
 ) : Error(code, message, status, details) {
-    data class InvalidRequest(val cause: String) : CoinPriceServiceError(
+    data class InvalidRequest(val apiMessage: String?, val cause: String? = null) : CoinPriceServiceError(
         code = "COINSVC_INVALID_REQUEST",
         status = HttpResponseStatus.BAD_REQUEST.code(),
         message = "Invalid request to the Coin Market Service",
-        details = listOf(cause),
+        details = listOfNotNull(cause, apiMessage),
     )
 
-    data class ServerErrorPrice(val cause: String) : CoinPriceServiceError(
+    data class ServerErrorPrice(val apiMessage: String?, val cause: String? = null) : CoinPriceServiceError(
         code = "COINSVC_SERVER_ERROR",
         status = HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
         message = "The Coin Market Service had an unexpected error",
-        details = listOf(cause),
+        details = listOfNotNull(cause, apiMessage),
     )
 }

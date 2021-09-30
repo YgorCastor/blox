@@ -6,15 +6,17 @@ import drewcarlson.coingecko.error.CoinGeckoApiError
 import drewcarlson.coingecko.error.CoinGeckoApiException
 import drewcarlson.coingecko.models.coins.CoinFullData
 import drewcarlson.coingecko.models.coins.MarketData
+import io.quarkus.arc.properties.IfBuildProperty
+import java.math.BigDecimal
+import javax.enterprise.context.ApplicationScoped
+import javax.ws.rs.core.Response.Status.Family
 import me.ycastor.btc.domain.marketplace.core.errors.CoinPriceServiceError
 import me.ycastor.btc.domain.marketplace.core.errors.InvalidCurrencyException
 import me.ycastor.btc.domain.marketplace.core.models.CoinMarketInformation
 import me.ycastor.btc.domain.marketplace.core.ports.output.FetchCoinMarketPricesInformation
-import java.math.BigDecimal
-import javax.enterprise.context.ApplicationScoped
-import javax.ws.rs.core.Response.Status.Family
 
 @ApplicationScoped
+@IfBuildProperty(name = "blox.market.engine", stringValue = "coingecko")
 class CoinMarketPricesGeckoService(private val client: CoinGeckoClient) : FetchCoinMarketPricesInformation {
 
     override suspend fun byCode(code: String) =
@@ -32,14 +34,15 @@ class CoinMarketPricesGeckoService(private val client: CoinGeckoClient) : FetchC
             ?.toBigDecimal() ?: throw InvalidCurrencyException(currency)
 
     private fun Throwable.toError() = when (this) {
-        is InvalidCurrencyException -> CoinPriceServiceError.InvalidRequest(this.message ?: "Invalid Currency")
-        is CoinGeckoApiException -> this.error.toServiceError()
-        else -> CoinPriceServiceError.ServerErrorPrice(this.message ?: "Unknown Error")
+        is InvalidCurrencyException -> CoinPriceServiceError.InvalidRequest("Invalid Currency", this.message)
+        is CoinGeckoApiException    -> this.error.toServiceError(this.message)
+        else                        -> CoinPriceServiceError.ServerErrorPrice("Unknown Error", this.message)
     }
 
-    private fun CoinGeckoApiError?.toServiceError() = when (Family.familyOf(this?.code ?: 500)) {
-        Family.CLIENT_ERROR -> CoinPriceServiceError.InvalidRequest(this?.message ?: "Unknown Request Failure")
-        else -> CoinPriceServiceError.ServerErrorPrice(this?.message ?: "Unknown Error")
-    }
+    private fun CoinGeckoApiError?.toServiceError(exceptionMessage: String) =
+        when (Family.familyOf(this?.code ?: 500)) {
+            Family.CLIENT_ERROR -> CoinPriceServiceError.InvalidRequest(this?.message, exceptionMessage)
+            else                -> CoinPriceServiceError.ServerErrorPrice(this?.message, exceptionMessage)
+        }
 
 }

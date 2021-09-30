@@ -1,11 +1,16 @@
 package me.ycastor.btc.domain.marketplace
 
-import arrow.core.*
+import arrow.core.Either
+import arrow.core.flatMap
+import arrow.core.flatten
+import arrow.core.right
+import arrow.core.zip
+import java.util.UUID
+import javax.enterprise.context.ApplicationScoped
 import me.ycastor.btc.commons.errorhandler.Error
 import me.ycastor.btc.domain.charges.core.ports.input.FetchCoinChargeUseCase
 import me.ycastor.btc.domain.marketplace.core.commands.PlaceOrderCommand
 import me.ycastor.btc.domain.marketplace.core.commands.PurchaseCalculationCommand
-import me.ycastor.btc.domain.marketplace.core.errors.CoinMarketError
 import me.ycastor.btc.domain.marketplace.core.errors.CoinPriceServiceError
 import me.ycastor.btc.domain.marketplace.core.errors.OrderPlacementError
 import me.ycastor.btc.domain.marketplace.core.models.CoinMarketInformation
@@ -17,11 +22,9 @@ import me.ycastor.btc.domain.marketplace.core.ports.input.BuyCoinUseCase
 import me.ycastor.btc.domain.marketplace.core.ports.input.CoinFetchUseCase
 import me.ycastor.btc.domain.marketplace.core.ports.output.FetchCoinMarketPricesInformation
 import me.ycastor.btc.domain.marketplace.core.ports.output.OrderPlacement
-import java.util.*
-import javax.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
-internal class CoinPurchaseManager(
+class CoinPurchaseManager(
     private val fetchCoinChargeUseCase: FetchCoinChargeUseCase,
     private val fetchCoinMarketPricesInformation: FetchCoinMarketPricesInformation,
     private val coinFetchUseCase: CoinFetchUseCase,
@@ -29,8 +32,7 @@ internal class CoinPurchaseManager(
 ) : BuyCoinUseCase {
 
     override suspend fun calculatePurchasePrice(command: PurchaseCalculationCommand): Either<Error, CoinPurchaseRequestInfo> {
-        val coin = coinFetchUseCase.withCode(command.coinCode)?.right()
-            ?: CoinMarketError.CoinNotFound(id = null, coinCode = command.coinCode).left()
+        val coin = coinFetchUseCase.fetchCoinWithCode(command.coinCode)
         val marketInformation = fetchCoinMarketPricesInformation.byCode(command.coinCode)
         val feeInfo = coin.flatMap { marketInformation.calculateOperationFee(it, command.quantity) }
 
@@ -45,7 +47,7 @@ internal class CoinPurchaseManager(
     }
 
     override suspend fun placeOrder(userId: UUID, command: PlaceOrderCommand): Either<Error, Order> = Either.catch {
-        coinFetchUseCase.withCode(command.coinCode)?.let {
+        coinFetchUseCase.fetchCoinWithCode(command.coinCode).map {
             return orderPlacement.placeOrder(
                 Order(
                     coinId = it.id,
@@ -55,12 +57,14 @@ internal class CoinPurchaseManager(
                     orderStatus = OrderStatus.PLACED,
                 )
             ).right()
-        } ?: CoinMarketError.CoinNotFound(id = null, coinCode = command.coinCode).left()
+        }
     }.mapLeft { OrderPlacementError.FailedToPlaceOrder(it.message) }.flatten()
 
 
-    private fun Either<CoinPriceServiceError, CoinMarketInformation>.calculateOperationFee(coin: Coin, quantity: Int) =
-        this.flatMap {
-            fetchCoinChargeUseCase.calculateChargeFor(coin.id, quantity, it.price)
-        }
+    private suspend fun Either<CoinPriceServiceError, CoinMarketInformation>.calculateOperationFee(
+        coin: Coin,
+        quantity: Int,
+    ) = this.flatMap {
+        fetchCoinChargeUseCase.calculateChargeFor(coin.id, quantity, it.price)
+    }
 }

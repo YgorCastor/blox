@@ -1,0 +1,2 @@
+INSERT INTO Coins(id, name, code, enabled) VALUES ('33ed5ea2-8f60-4ec2-8f20-b63779d73464', 'Bitcoin', 'bitcoin', true);
+INSERT INTO Fees(id, coinId, percentage) VALUES ('6026e87e-3d47-4720-83c7-20d893e2f276', '33ed5ea2-8f60-4ec2-8f20-b63779d73464', 5.2);

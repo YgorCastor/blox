@@ -4,8 +4,10 @@ import org.hibernate.Hibernate
 import java.util.*
 import javax.persistence.Entity
 import javax.persistence.Id
+import javax.persistence.Table
 
 @Entity
+@Table(name = "Coins")
 data class Coin(
     @Id
     var id: UUID = UUID.randomUUID(),

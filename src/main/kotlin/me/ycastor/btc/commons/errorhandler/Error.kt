@@ -6,3 +6,5 @@ abstract class Error(
     open val status: Int,
     open val details: List<String> = emptyList(),
 )
+
+class UnknownError(val errmes: String): Error(code = "", message = errmes, status = 0, details = listOf())
